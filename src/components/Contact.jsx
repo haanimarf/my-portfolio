@@ -1,10 +1,59 @@
-import React from "react";
-import { Mail, MapPin } from "lucide-react";
+
+import React, { useEffect, useState } from "react";
+import { Mail, MapPin, Phone } from "lucide-react";
 
 function Contact() {
-  return (
-    <section className="contact-section" id="contact">
+  const [contact, setContact] = useState({
+    email: "fathimahaanim2003@gmail.com",
+    phone: "",
+    location: "Sri Lanka",
+    linkedin:
+      "https://www.linkedin.com/in/fathima-haanim/",
+    github: "https://github.com/haanimarf",
+  });
 
+  useEffect(() => {
+    const savedContact =
+      localStorage.getItem("portfolioContact");
+
+    if (savedContact) {
+      try {
+        const parsedContact = JSON.parse(savedContact);
+
+        setContact({
+          email:
+            parsedContact.email ||
+            "fathimahaanim2003@gmail.com",
+
+          phone:
+            parsedContact.phone || "",
+
+          location:
+            parsedContact.location ||
+            "Sri Lanka",
+
+          linkedin:
+            parsedContact.linkedin ||
+            "https://www.linkedin.com/in/fathima-haanim/",
+
+          github:
+            parsedContact.github ||
+            "https://github.com/haanimarf",
+        });
+      } catch (error) {
+        console.error(
+          "Unable to load contact information:",
+          error
+        );
+      }
+    }
+  }, []);
+
+  return (
+    <section
+      className="contact-section"
+      id="contact"
+    >
       <div className="contact-container">
 
         {/* Heading */}
@@ -16,17 +65,17 @@ function Contact() {
           </h2>
 
           <p className="contact-description">
-            Feel free to connect with me through any of the platforms below.
+            Feel free to connect with me through any
+            of the platforms below.
           </p>
         </div>
-
 
         {/* Contact Details */}
         <div className="contact-links">
 
           {/* Email */}
           <a
-            href="mailto:YOUR_EMAIL@gmail.com"
+            href={`mailto:${contact.email}`}
             className="contact-pill"
           >
             <div className="contact-pill-icon">
@@ -35,45 +84,85 @@ function Contact() {
 
             <div className="contact-pill-text">
               <span>Email</span>
-              <strong>fathimahaanim2003@gmail.com</strong>
+
+              <strong>
+                {contact.email}
+              </strong>
             </div>
           </a>
+
+
+          {/* Phone */}
+          {contact.phone && (
+            <a
+              href={`tel:${contact.phone}`}
+              className="contact-pill"
+            >
+              <div className="contact-pill-icon">
+                <Phone size={20} />
+              </div>
+
+              <div className="contact-pill-text">
+                <span>Phone</span>
+
+                <strong>
+                  {contact.phone}
+                </strong>
+              </div>
+            </a>
+          )}
 
 
           {/* GitHub */}
-          <a
-            href="https://github.com/haanimarf"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="contact-pill"
-          >
-            <div className="contact-pill-icon">
-             <span className="social-text">GH</span>
-            </div>
+          {contact.github && (
+            <a
+              href={contact.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="contact-pill"
+            >
+              <div className="contact-pill-icon">
+                <span className="social-text">
+                  GH
+                </span>
+              </div>
 
-            <div className="contact-pill-text">
-              <span>GitHub</span>
-              <strong>github.com/haanimarf</strong>
-            </div>
-          </a>
+              <div className="contact-pill-text">
+                <span>GitHub</span>
+
+                <strong>
+                  {contact.github
+                    .replace("https://", "")
+                    .replace("www.", "")}
+                </strong>
+              </div>
+            </a>
+          )}
 
 
           {/* LinkedIn */}
-          <a
-            href="https://www.linkedin.com/in/fathima-haanim/?lipi=urn%3Ali%3Apage%3Ad_flagship3_feed%3B7b6ZXSNNR2mBkBqGnVJ1Iw%3D%3D"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="contact-pill"
-          >
-            <div className="contact-pill-icon">
-             <span className="social-text">in</span>
-            </div>
+          {contact.linkedin && (
+            <a
+              href={contact.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="contact-pill"
+            >
+              <div className="contact-pill-icon">
+                <span className="social-text">
+                  in
+                </span>
+              </div>
 
-            <div className="contact-pill-text">
-              <span>LinkedIn</span>
-              <strong>Fathima Haanim</strong>
-            </div>
-          </a>
+              <div className="contact-pill-text">
+                <span>LinkedIn</span>
+
+                <strong>
+                  Fathima Haanim
+                </strong>
+              </div>
+            </a>
+          )}
 
 
           {/* Location */}
@@ -84,17 +173,17 @@ function Contact() {
 
             <div className="contact-pill-text">
               <span>Location</span>
-              <strong>Sri Lanka</strong>
+
+              <strong>
+                {contact.location}
+              </strong>
             </div>
           </div>
 
         </div>
-
       </div>
-
     </section>
   );
 }
 
 export default Contact;
-

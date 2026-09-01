@@ -1,10 +1,16 @@
-import { useState } from "react";
-import { ExternalLink, X, ArrowUpRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  ExternalLink,
+  X,
+  ArrowUpRight,
+} from "lucide-react";
 
 function Projects() {
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedProject, setSelectedProject] =
+    useState(null);
 
-  const projects = [
+  // Default projects
+  const defaultProjects = [
     {
       title: "Tour-Main",
       category: "Web Development",
@@ -12,7 +18,8 @@ function Projects() {
         "A tourism-focused web application designed to provide users with useful information and guidance for exploring tourist destinations.",
       image: "/projects/tour-main.png",
       technologies: ["HTML", "CSS", "JavaScript"],
-      github: "https://github.com/haanimarf/Tour-Main",
+      github:
+        "https://github.com/haanimarf/Tour-Main",
       demo: "#",
       details:
         "Tour-Main is a tourism web project focused on presenting tourist destinations in an attractive and user-friendly way. The project helped strengthen my skills in responsive web design, frontend development and user interface creation.",
@@ -24,8 +31,14 @@ function Projects() {
       description:
         "A responsive weather application that provides real-time weather information for cities using a weather API.",
       image: "/projects/weather-app.png",
-      technologies: ["HTML", "CSS", "JavaScript", "Weather API"],
-      github: "https://github.com/haanimarf/weather-app",
+      technologies: [
+        "HTML",
+        "CSS",
+        "JavaScript",
+        "Weather API",
+      ],
+      github:
+        "https://github.com/haanimarf/weather-app",
       demo: "#",
       details:
         "The Weather App allows users to search for a city and view current weather information including temperature, weather conditions, humidity and wind speed. It uses JavaScript and an external weather API to retrieve real-time data.",
@@ -38,7 +51,8 @@ function Projects() {
         "A simple and responsive image carousel with smooth transitions and navigation controls.",
       image: "/projects/image-slider.png",
       technologies: ["HTML", "CSS", "JavaScript"],
-      github: "https://github.com/haanimarf/ImageSlider",
+      github:
+        "https://github.com/haanimarf/ImageSlider",
       demo: "#",
       details:
         "Image Slider is a lightweight frontend project that allows users to navigate through multiple images using previous and next controls. CSS animations and JavaScript are used to create a smooth and responsive user experience.",
@@ -51,15 +65,82 @@ function Projects() {
         "A responsive personal resume application designed to present professional information, skills, projects and achievements.",
       image: "/projects/resume-app.png",
       technologies: ["HTML", "CSS", "JavaScript"],
-      github: "https://github.com/haanimarf/Resume-App",
+      github:
+        "https://github.com/haanimarf/Resume-App",
       demo: "#",
       details:
         "Resume App is a personal web application created to present my professional profile, education, technical skills, projects and achievements in a clean and responsive layout.",
     },
   ];
 
+ const [projects, setProjects] = useState([]);
+
+  // Load projects added from Admin Panel
+  useEffect(() => {
+    const savedProjects =
+      localStorage.getItem("portfolioProjects");
+
+    if (savedProjects) {
+      try {
+        const adminProjects =
+          JSON.parse(savedProjects);
+
+        const formattedAdminProjects =
+          adminProjects.map((project) => ({
+            ...project,
+
+            category:
+              project.category ||
+              "Web Development",
+
+            description:
+              project.description ||
+              "A portfolio project developed to demonstrate practical technical skills.",
+
+            details:
+              project.details ||
+              project.description ||
+              "A portfolio project developed to demonstrate practical technical skills.",
+
+            technologies:
+              typeof project.technologies === "string"
+                ? project.technologies
+                    .split(",")
+                    .map((technology) =>
+                      technology.trim()
+                    )
+                    .filter(Boolean)
+                : project.technologies || [],
+
+            github:
+              project.githubLink || "#",
+
+            demo:
+              project.liveLink || "#",
+
+            image:
+              project.image ||
+              "/projects/project-placeholder.png",
+          }));
+
+        setProjects([
+          ...defaultProjects,
+          ...formattedAdminProjects,
+        ]);
+      } catch (error) {
+        console.error(
+          "Unable to load admin projects:",
+          error
+        );
+      }
+    }
+  }, []);
+
   return (
-    <section className="projects-section" id="projects">
+    <section
+      className="projects-section"
+      id="projects"
+    >
       <div className="projects-container">
 
         {/* SECTION HEADING */}
@@ -77,8 +158,10 @@ function Projects() {
           {projects.map((project, index) => (
             <article
               className="project-card"
-              key={index}
-              onClick={() => setSelectedProject(project)}
+              key={project.id || index}
+              onClick={() =>
+                setSelectedProject(project)
+              }
             >
 
               {/* PROJECT IMAGE */}
@@ -88,6 +171,10 @@ function Projects() {
                   src={project.image}
                   alt={project.title}
                   className="project-image"
+                  onError={(e) => {
+                    e.currentTarget.style.display =
+                      "none";
+                  }}
                 />
 
                 <div className="project-overlay">
@@ -103,16 +190,20 @@ function Projects() {
               <div className="project-content">
 
                 <div className="project-top">
+
                   <span className="project-category">
                     {project.category}
                   </span>
 
                   <span className="project-number">
-                    0{index + 1}
+                    {String(index + 1).padStart(2, "0")}
                   </span>
+
                 </div>
 
-                <h3>{project.title}</h3>
+                <h3>
+                  {project.title}
+                </h3>
 
                 <p className="project-description">
                   {project.description}
@@ -120,39 +211,49 @@ function Projects() {
 
                 {/* TECHNOLOGIES */}
                 <div className="project-technologies">
-                  {project.technologies.map((technology, techIndex) => (
-                    <span key={techIndex}>
-                      {technology}
-                    </span>
-                  ))}
+
+                  {project.technologies.map(
+                    (technology, techIndex) => (
+                      <span key={techIndex}>
+                        {technology}
+                      </span>
+                    )
+                  )}
+
                 </div>
 
                 {/* BUTTONS */}
                 <div
                   className="project-actions"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) =>
+                    e.stopPropagation()
+                  }
                 >
 
-                  <a
-                    href={project.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="project-button github-button"
-                    >
-                    GitHub ↗
-                    </a>
+                  {project.github &&
+                    project.github !== "#" && (
+                      <a
+                        href={project.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="project-button github-button"
+                      >
+                        GitHub ↗
+                      </a>
+                    )}
 
-                  {project.demo !== "#" && (
-                    <a
-                      href={project.demo}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="project-button demo-button"
-                    >
-                      <ExternalLink size={16} />
-                      Live Demo
-                    </a>
-                  )}
+                  {project.demo &&
+                    project.demo !== "#" && (
+                      <a
+                        href={project.demo}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="project-button demo-button"
+                      >
+                        <ExternalLink size={16} />
+                        Live Demo
+                      </a>
+                    )}
 
                 </div>
 
@@ -168,18 +269,24 @@ function Projects() {
       {selectedProject && (
         <div
           className="project-modal-overlay"
-          onClick={() => setSelectedProject(null)}
+          onClick={() =>
+            setSelectedProject(null)
+          }
         >
 
           <div
             className="project-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
 
             {/* CLOSE BUTTON */}
             <button
               className="project-modal-close"
-              onClick={() => setSelectedProject(null)}
+              onClick={() =>
+                setSelectedProject(null)
+              }
               aria-label="Close project details"
             >
               <X size={20} />
@@ -190,6 +297,10 @@ function Projects() {
               src={selectedProject.image}
               alt={selectedProject.title}
               className="modal-project-image"
+              onError={(e) => {
+                e.currentTarget.style.display =
+                  "none";
+              }}
             />
 
             {/* MODAL CONTENT */}
@@ -199,48 +310,62 @@ function Projects() {
                 {selectedProject.category}
               </span>
 
-              <h2>{selectedProject.title}</h2>
+              <h2>
+                {selectedProject.title}
+              </h2>
 
               <p className="modal-project-description">
                 {selectedProject.details}
               </p>
 
-              <h4>Technologies Used</h4>
+              {selectedProject.technologies?.length >
+                0 && (
+                <>
+                  <h4>
+                    Technologies Used
+                  </h4>
 
-              <div className="modal-technologies">
-                {selectedProject.technologies.map(
-                  (technology, index) => (
-                    <span key={index}>
-                      {technology}
-                    </span>
-                  )
-                )}
-              </div>
+                  <div className="modal-technologies">
+
+                    {selectedProject.technologies.map(
+                      (technology, index) => (
+                        <span key={index}>
+                          {technology}
+                        </span>
+                      )
+                    )}
+
+                  </div>
+                </>
+              )}
 
               {/* MODAL BUTTONS */}
               <div className="modal-project-actions">
 
-                <a
-                  href={selectedProject.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="project-button github-button"
-                >
-                 
-                  View GitHub
-                </a>
+                {selectedProject.github &&
+                  selectedProject.github !== "#" && (
+                    <a
+                      href={selectedProject.github}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="project-button github-button"
+                    >
+                      View GitHub
+                    </a>
+                  )}
 
-                {selectedProject.demo !== "#" && (
-                  <a
-                    href={selectedProject.demo}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="project-button demo-button"
-                  >
-                    <ExternalLink size={17} />
-                    Live Demo
-                  </a>
-                )}
+                {selectedProject.demo &&
+                  selectedProject.demo !== "#" && (
+                    <a
+                      href={selectedProject.demo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="project-button demo-button"
+                    >
+                      <ExternalLink size={17} />
+                      Live Demo
+                    </a>
+                  )}
 
               </div>
 

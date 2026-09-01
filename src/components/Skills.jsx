@@ -1,71 +1,149 @@
+import { useEffect, useState } from "react";
+
+const defaultSkillGroups = [
+  {
+    category: "Programming & Development",
+    icon: "💻",
+    skills: [
+      "HTML",
+      "CSS",
+      "JavaScript",
+      "React",
+      "Node.js",
+      "Java",
+      "C++",
+    ],
+  },
+  {
+    category: "Data & Analytics",
+    icon: "📊",
+    skills: [
+      "Excel",
+      "SQL",
+      "Power BI",
+      "Python",
+      "Pandas",
+      "Data Analysis",
+    ],
+  },
+  {
+    category: "Cloud & DevOps",
+    icon: "☁️",
+    skills: [
+      "AWS",
+      "EC2",
+      "S3",
+      "RDS",
+      "Docker",
+      "Linux",
+    ],
+  },
+  {
+    category: "Tools & Technologies",
+    icon: "🛠️",
+    skills: [
+      "Git",
+      "GitHub",
+      "VS Code",
+      "Figma",
+      "Postman",
+      "MySQL",
+    ],
+  },
+];
+
 function Skills() {
+  const [skillGroups, setSkillGroups] =
+    useState(defaultSkillGroups);
+
+  useEffect(() => {
+    const savedSkills =
+      localStorage.getItem("portfolioSkills");
+
+    if (!savedSkills) {
+      return;
+    }
+
+    try {
+      const adminSkills = JSON.parse(savedSkills);
+
+      const updatedGroups = defaultSkillGroups.map(
+        (group) => {
+          const adminSkillsForCategory =
+            adminSkills
+              .filter(
+                (skill) =>
+                  skill.category === group.category
+              )
+              .map((skill) => skill.name);
+
+          const combinedSkills = [
+            ...group.skills,
+            ...adminSkillsForCategory,
+          ];
+
+          // Remove duplicate skills
+          const uniqueSkills = [
+            ...new Set(combinedSkills),
+          ];
+
+          return {
+            ...group,
+            skills: uniqueSkills,
+          };
+        }
+      );
+
+      setSkillGroups(updatedGroups);
+    } catch (error) {
+      console.error(
+        "Unable to load admin skills:",
+        error
+      );
+    }
+  }, []);
+
   return (
-    <section className="skills-section" id="skills">
+    <section
+      className="skills-section"
+      id="skills"
+    >
       <div className="skills-container">
+
         <div className="section-heading">
           <p>MY SKILLS</p>
+
           <h2>
-            Technologies I <span>work with.</span>
+            Technologies I{" "}
+            <span>work with.</span>
           </h2>
         </div>
 
         <div className="skills-grid">
-          <div className="skill-card">
-            <div className="skill-icon">💻</div>
-            <h3>Programming & Development</h3>
 
-            <div className="skill-list">
-              <span>HTML</span>
-              <span>CSS</span>
-              <span>JavaScript</span>
-              <span>React</span>
-              <span>Node.js</span>
-              <span>Java</span>
-              <span>C++</span>
+          {skillGroups.map((group) => (
+            <div
+              className="skill-card"
+              key={group.category}
+            >
+              <div className="skill-icon">
+                {group.icon}
+              </div>
+
+              <h3>{group.category}</h3>
+
+              <div className="skill-list">
+                {group.skills.map((skill) => (
+                  <span
+                    key={`${group.category}-${skill}`}
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          ))}
 
-          <div className="skill-card">
-            <div className="skill-icon">📊</div>
-            <h3>Data & Analytics</h3>
-
-            <div className="skill-list">
-              <span>Excel</span>
-              <span>SQL</span>
-              <span>Power BI</span>
-              <span>Python</span>
-              <span>Pandas</span>
-              <span>Data Analysis</span>
-            </div>
-          </div>
-
-          <div className="skill-card">
-            <div className="skill-icon">☁️</div>
-            <h3>Cloud & DevOps</h3>
-
-            <div className="skill-list">
-              <span>AWS</span>
-              <span>EC2</span>
-              <span>S3</span>
-              <span>RDS</span>
-              <span>Docker</span>
-              <span>Linux</span>
-            </div>
-          </div>
-
-          <div className="skill-card">
-            <div className="skill-icon">🛠️</div>
-            <h3>Tools & Technologies</h3>
-
-            <div className="skill-list">
-              <span>Git</span>
-              <span>GitHub</span>
-              <span>VS Code</span>
-              <span>Figma</span>
-              <span>Postman</span>
-              <span>MySQL</span>
-            </div>
-          </div>
         </div>
       </div>
     </section>

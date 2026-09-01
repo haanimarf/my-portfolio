@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function Certificates() {
   const [selectedCertificate, setSelectedCertificate] = useState(null);
 
-  const certificates = [
+  // Default certificates
+  const defaultCertificates = [
     {
       title: "Preparing Data for Analysis with Microsoft Excel",
       issuer: "Microsoft · Coursera",
@@ -23,7 +24,11 @@ function Certificates() {
       type: "Generative AI",
       description:
         "Completed an online course covering the fundamentals of Generative AI, its applications and modern AI concepts.",
-      skills: ["Generative AI", "Artificial Intelligence", "AI Applications"],
+      skills: [
+        "Generative AI",
+        "Artificial Intelligence",
+        "AI Applications",
+      ],
       verify:
         "https://coursera.org/verify/E57UOFE4DAB8",
     },
@@ -35,7 +40,11 @@ function Certificates() {
       type: "Professional Course",
       description:
         "Completed a course covering key concepts in human resource management, including recruitment and employee development.",
-      skills: ["HR Management", "Recruitment", "Employee Development"],
+      skills: [
+        "HR Management",
+        "Recruitment",
+        "Employee Development",
+      ],
       verify:
         "https://coursera.org/verify/E64MQ7ZIT2WX",
     },
@@ -47,7 +56,11 @@ function Certificates() {
       type: "Data Analytics",
       description:
         "Completed an online course focused on using Microsoft Power BI for data analysis and data visualization.",
-      skills: ["Power BI", "Data Analysis", "Data Visualization"],
+      skills: [
+        "Power BI",
+        "Data Analysis",
+        "Data Visualization",
+      ],
       verify:
         "https://coursera.org/verify/26MGQUS8FCH8",
     },
@@ -59,19 +72,28 @@ function Certificates() {
       type: "SQL & Data",
       description:
         "Completed an online course focused on SQL fundamentals and working with SQL through Jupyter Notebooks.",
-      skills: ["SQL", "Jupyter Notebooks", "Database Queries"],
+      skills: [
+        "SQL",
+        "Jupyter Notebooks",
+        "Database Queries",
+      ],
       verify:
         "https://coursera.org/verify/8KG9OWO6SNZG",
     },
 
     {
       title: "Free CCNA Training Program",
-      issuer: "Global Network of Technological Studies (Pvt) Ltd",
+      issuer:
+        "Global Network of Technological Studies (Pvt) Ltd",
       date: "April 20 – May 25, 2026",
       type: "Networking",
       description:
         "Participated in the Free CCNA Training Program and gained foundational knowledge in networking and CCNA-related concepts.",
-      skills: ["Networking", "CCNA", "Network Fundamentals"],
+      skills: [
+        "Networking",
+        "CCNA",
+        "Network Fundamentals",
+      ],
       certificateId: "2026-FCCNA-00001",
     },
 
@@ -82,7 +104,11 @@ function Certificates() {
       type: "DevOps",
       description:
         "Successfully completed the 2-Day CI/CD Project Session conducted by SRTechOps, gaining hands-on experience and a strong foundation in CI/CD processes.",
-      skills: ["CI/CD", "DevOps", "Project Experience"],
+      skills: [
+        "CI/CD",
+        "DevOps",
+        "Project Experience",
+      ],
     },
 
     {
@@ -92,7 +118,10 @@ function Certificates() {
       type: "Programming",
       description:
         "Completed the online course Python for Beginners and developed foundational Python programming skills.",
-      skills: ["Python", "Programming Fundamentals"],
+      skills: [
+        "Python",
+        "Programming Fundamentals",
+      ],
       certificateId: "9616896",
     },
 
@@ -103,7 +132,11 @@ function Certificates() {
       type: "Full Stack Development",
       description:
         "Completed an online course covering the fundamentals of full stack Java development and web application development concepts.",
-      skills: ["Java", "Full Stack Development", "Web Development"],
+      skills: [
+        "Java",
+        "Full Stack Development",
+        "Web Development",
+      ],
       certificateId: "9487593",
     },
 
@@ -114,58 +147,106 @@ function Certificates() {
       type: "UI/UX Design",
       description:
         "Completed an online course introducing Figma and the fundamentals of interface design and prototyping.",
-      skills: ["Figma", "UI Design", "Prototyping"],
+      skills: [
+        "Figma",
+        "UI Design",
+        "Prototyping",
+      ],
       certificateId: "9454555",
     },
+
     {
-  title: "AWS re/Start Graduate",
-  issuer: "Amazon Web Services (AWS) · Credly",
-  date: "2026",
-  type: "Cloud Computing",
-  description:
-    "Successfully completed the AWS re/Start program and earned the AWS re/Start Graduate digital credential, demonstrating foundational knowledge of AWS Cloud, cloud computing, and essential technical skills.",
-  skills: [
-    "AWS",
-    "Cloud Computing",
-    "EC2",
-    "S3",
-    "RDS",
-    "VPC",
-    "CloudWatch"
-  ],
-  verify:
-    "https://www.credly.com/badges/e2311a20-19d1-40da-9626-a059e5ce39aa",
-},
+      title: "AWS re/Start Graduate",
+      issuer: "Amazon Web Services (AWS) · Credly",
+      date: "2026",
+      type: "Cloud Computing",
+      description:
+        "Successfully completed the AWS re/Start program and earned the AWS re/Start Graduate digital credential, demonstrating foundational knowledge of AWS Cloud, cloud computing, and essential technical skills.",
+      skills: [
+        "AWS",
+        "Cloud Computing",
+        "EC2",
+        "S3",
+        "RDS",
+        "VPC",
+        "CloudWatch",
+      ],
+      verify:
+        "https://www.credly.com/badges/e2311a20-19d1-40da-9626-a059e5ce39aa",
+    },
   ];
 
-  return (
-    <section className="certificates-section" id="certificates">
+  // Certificates including admin-added certificates
+  const [certificates, setCertificates] =
+    useState(defaultCertificates);
 
+  useEffect(() => {
+    const savedCertificates =
+      localStorage.getItem("portfolioCertificates");
+
+    if (savedCertificates) {
+      try {
+        const adminCertificates =
+          JSON.parse(savedCertificates);
+
+        const formattedAdminCertificates =
+          adminCertificates.map((certificate) => ({
+            ...certificate,
+
+            type:
+              certificate.type ||
+              "Professional Certificate",
+
+            description:
+              certificate.description ||
+              `Completed the ${certificate.title} certificate issued by ${certificate.issuer}.`,
+
+            skills:
+              certificate.skills || [],
+
+            verify:
+              certificate.link || "",
+          }));
+
+        setCertificates([
+          ...defaultCertificates,
+          ...formattedAdminCertificates,
+        ]);
+      } catch (error) {
+        console.error(
+          "Unable to load admin certificates:",
+          error
+        );
+      }
+    }
+  }, []);
+
+  return (
+    <section
+      className="certificates-section"
+      id="certificates"
+    >
       <div className="certificates-container">
 
         {/* HEADING */}
-
         <div className="section-heading">
-
           <p>MY ACHIEVEMENTS</p>
 
           <h2>
             Courses & <span>Certificates.</span>
           </h2>
-
         </div>
 
-
         {/* CERTIFICATE GRID */}
-
         <div className="certificates-grid">
 
           {certificates.map((certificate, index) => (
-
             <div
               className="certificate-card"
-              key={index}
-              onClick={() => setSelectedCertificate(certificate)}
+              key={certificate.id || index}
+              onClick={() =>
+                setSelectedCertificate(certificate)
+              }
             >
 
               <div className="certificate-top">
@@ -179,7 +260,6 @@ function Certificates() {
                 </span>
 
               </div>
-
 
               <div className="certificate-content">
 
@@ -197,7 +277,6 @@ function Certificates() {
 
               </div>
 
-
               <div className="certificate-footer">
 
                 <span>View Details</span>
@@ -209,47 +288,43 @@ function Certificates() {
               </div>
 
             </div>
-
           ))}
 
         </div>
-
       </div>
 
-
-      {/* =========================
-          CERTIFICATE MODAL
-      ========================= */}
-
+      {/* CERTIFICATE MODAL */}
       {selectedCertificate && (
-
         <div
           className="certificate-modal-overlay"
-          onClick={() => setSelectedCertificate(null)}
+          onClick={() =>
+            setSelectedCertificate(null)
+          }
         >
 
           <div
             className="certificate-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
           >
 
             <button
               className="modal-close"
-              onClick={() => setSelectedCertificate(null)}
+              onClick={() =>
+                setSelectedCertificate(null)
+              }
             >
               ×
             </button>
-
 
             <span className="certificate-type">
               {selectedCertificate.type}
             </span>
 
-
             <h2>
               {selectedCertificate.title}
             </h2>
-
 
             <p className="modal-issuer">
               Issued by{" "}
@@ -258,56 +333,50 @@ function Certificates() {
               </strong>
             </p>
 
-
             <div className="modal-info">
 
               <div>
                 <strong>Completed</strong>
-                <span>{selectedCertificate.date}</span>
+                <span>
+                  {selectedCertificate.date}
+                </span>
               </div>
 
-
               {selectedCertificate.certificateId && (
-
                 <div>
                   <strong>Certificate ID</strong>
+
                   <span>
                     {selectedCertificate.certificateId}
                   </span>
                 </div>
-
               )}
 
             </div>
-
 
             <p className="modal-description">
               {selectedCertificate.description}
             </p>
 
+            {selectedCertificate.skills?.length > 0 && (
+              <>
+                <h4>Skills & Topics</h4>
 
-            <h4>
-              Skills & Topics
-            </h4>
+                <div className="modal-skills">
 
+                  {selectedCertificate.skills.map(
+                    (skill, index) => (
+                      <span key={index}>
+                        {skill}
+                      </span>
+                    )
+                  )}
 
-            <div className="modal-skills">
-
-              {selectedCertificate.skills.map(
-                (skill, index) => (
-
-                  <span key={index}>
-                    {skill}
-                  </span>
-
-                )
-              )}
-
-            </div>
-
+                </div>
+              </>
+            )}
 
             {selectedCertificate.verify && (
-
               <a
                 href={selectedCertificate.verify}
                 target="_blank"
@@ -316,19 +385,14 @@ function Certificates() {
               >
                 Verify Certificate ↗
               </a>
-
             )}
-            
 
           </div>
 
         </div>
-
       )}
-
     </section>
   );
 }
 
 export default Certificates;
-
