@@ -10,6 +10,7 @@ import {
   X,
   Save,
 } from "lucide-react";
+import { supabase } from "../supabase";
 
 function AdminProjects() {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ function AdminProjects() {
   const [projects, setProjects] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -27,36 +29,38 @@ function AdminProjects() {
     githubLink: "",
   });
 
-  // Load saved projects
-  useEffect(() => {
-    const savedProjects =
-      localStorage.getItem("portfolioProjects");
+  // Load projects from Supabase
+  const loadProjects = async () => {
+    setLoading(true);
 
-    if (savedProjects) {
-      try {
-        setProjects(JSON.parse(savedProjects));
-      } catch (error) {
-        console.error(
-          "Unable to load projects:",
-          error
-        );
-      }
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Unable to load projects:", error);
+      alert("Unable to load projects.");
+    } else {
+      const formattedProjects = data.map((project) => ({
+        id: project.id,
+        title: project.title || "",
+        description: project.description || "",
+        technologies: project.technologies || "",
+        image: project.image || "",
+        liveLink: project.live_link || "",
+        githubLink: project.github_link || "",
+      }));
+
+      setProjects(formattedProjects);
     }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadProjects();
   }, []);
-
-  // Save projects
-  const saveProjects = (updatedProjects) => {
-  setProjects(updatedProjects);
-
-  localStorage.setItem(
-    "portfolioProjects",
-    JSON.stringify(updatedProjects)
-  );
-
-  window.dispatchEvent(
-    new Event("portfolioProjectsUpdated")
-  );
-};
 
   // Handle input changes
   const handleChange = (e) => {
@@ -83,61 +87,73 @@ function AdminProjects() {
   };
 
   // Edit project
- const handleEdit = (project) => {
-  setEditingId(project.id);
+  const handleEdit = (project) => {
+    setEditingId(project.id);
 
-  setFormData({
-    title: project.title || "",
-    description: project.description || "",
-    technologies: Array.isArray(project.technologies)
-      ? project.technologies.join(", ")
-      : project.technologies || "",
-    image: project.image || "",
-    liveLink: project.liveLink || "",
-    githubLink: project.githubLink || "",
-  });
+    setFormData({
+      title: project.title || "",
+      description: project.description || "",
+      technologies: Array.isArray(project.technologies)
+        ? project.technologies.join(", ")
+        : project.technologies || "",
+      image: project.image || "",
+      liveLink: project.liveLink || "",
+      githubLink: project.githubLink || "",
+    });
 
-  setShowForm(true);
-};
+    setShowForm(true);
+  };
 
   // Submit form
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.title || !formData.description) {
-      alert(
-        "Please enter project title and description."
-      );
+      alert("Please enter project title and description.");
       return;
     }
 
-    if (editingId) {
-      const updatedProjects = projects.map(
-        (project) =>
-          project.id === editingId
-            ? {
-                ...project,
-                ...formData,
-              }
-            : project
-      );
+    const projectData = {
+      title: formData.title,
+      description: formData.description,
+      technologies: formData.technologies,
+      image: formData.image,
+      live_link: formData.liveLink,
+      github_link: formData.githubLink,
+    };
 
-      saveProjects(updatedProjects);
+    // UPDATE
+    if (editingId) {
+      const { error } = await supabase
+        .from("projects")
+        .update(projectData)
+        .eq("id", editingId);
+
+      if (error) {
+        console.error("Update error:", error);
+        alert("Project update failed.");
+        return;
+      }
 
       alert("Project updated successfully!");
-    } else {
-      const newProject = {
-        id: Date.now(),
-        ...formData,
-      };
+    }
 
-      saveProjects([
-        ...projects,
-        newProject,
-      ]);
+    // INSERT
+    else {
+      const { error } = await supabase
+        .from("projects")
+        .insert([projectData]);
+
+      if (error) {
+        console.error("Insert error:", error);
+        alert("Project could not be added.");
+        return;
+      }
 
       alert("Project added successfully!");
     }
+
+    await loadProjects();
 
     setFormData({
       title: "",
@@ -153,18 +169,25 @@ function AdminProjects() {
   };
 
   // Delete project
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this project?"
     );
 
     if (!confirmDelete) return;
 
-    const updatedProjects = projects.filter(
-      (project) => project.id !== id
-    );
+    const { error } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", id);
 
-    saveProjects(updatedProjects);
+    if (error) {
+      console.error("Delete error:", error);
+      alert("Project could not be deleted.");
+      return;
+    }
+
+    await loadProjects();
 
     alert("Project deleted successfully!");
   };
@@ -190,9 +213,7 @@ function AdminProjects() {
         <button
           type="button"
           className="admin-back-btn"
-          onClick={() =>
-            navigate("/admin/dashboard")
-          }
+          onClick={() => navigate("/admin/dashboard")}
         >
           <ArrowLeft size={18} />
           Back to Dashboard
@@ -204,9 +225,7 @@ function AdminProjects() {
       <div className="admin-project-toolbar">
 
         <div>
-          <strong>
-            {projects.length}
-          </strong>
+          <strong>{projects.length}</strong>
 
           <span>
             {" "}
@@ -262,9 +281,7 @@ function AdminProjects() {
 
             {/* TITLE */}
             <div className="admin-form-group">
-              <label>
-                Project Title
-              </label>
+              <label>Project Title</label>
 
               <input
                 type="text"
@@ -278,9 +295,7 @@ function AdminProjects() {
 
             {/* DESCRIPTION */}
             <div className="admin-form-group">
-              <label>
-                Project Description
-              </label>
+              <label>Project Description</label>
 
               <textarea
                 name="description"
@@ -294,9 +309,7 @@ function AdminProjects() {
 
             {/* TECHNOLOGIES */}
             <div className="admin-form-group">
-              <label>
-                Technologies
-              </label>
+              <label>Technologies</label>
 
               <input
                 type="text"
@@ -313,9 +326,7 @@ function AdminProjects() {
 
             {/* IMAGE */}
             <div className="admin-form-group">
-              <label>
-                Project Image
-              </label>
+              <label>Project Image</label>
 
               <input
                 type="text"
@@ -332,9 +343,7 @@ function AdminProjects() {
 
             {/* LIVE LINK */}
             <div className="admin-form-group">
-              <label>
-                Live Project Link
-              </label>
+              <label>Live Project Link</label>
 
               <input
                 type="url"
@@ -347,9 +356,7 @@ function AdminProjects() {
 
             {/* GITHUB */}
             <div className="admin-form-group">
-              <label>
-                GitHub Link
-              </label>
+              <label>GitHub Link</label>
 
               <input
                 type="url"
@@ -377,18 +384,23 @@ function AdminProjects() {
         </div>
       )}
 
-      {/* EMPTY STATE */}
-      {projects.length === 0 ? (
+      {/* LOADING */}
+      {loading ? (
 
+        <div className="admin-empty-state">
+          <h2>Loading Projects...</h2>
+        </div>
+
+      ) : projects.length === 0 ? (
+
+        /* EMPTY STATE */
         <div className="admin-empty-state">
 
           <div className="empty-icon">
             <FolderKanban size={35} />
           </div>
 
-          <h2>
-            No Projects Yet
-          </h2>
+          <h2>No Projects Yet</h2>
 
           <p>
             Add your first project to display it
@@ -434,22 +446,22 @@ function AdminProjects() {
               {/* CONTENT */}
               <div className="admin-project-content">
 
-                <h3>
-                  {project.title}
-                </h3>
+                <h3>{project.title}</h3>
 
-                <p>
-                  {project.description}
-                </p>
+                <p>{project.description}</p>
 
                 {project.technologies && (
                   <div className="admin-project-tech">
 
-                    {project.technologies
-                      .split(",")
+                    {(Array.isArray(project.technologies)
+                      ? project.technologies
+                      : project.technologies.split(",")
+                    )
+                      .map((tech) => tech.trim())
+                      .filter(Boolean)
                       .map((tech, index) => (
                         <span key={index}>
-                          {tech.trim()}
+                          {tech}
                         </span>
                       ))}
 
@@ -487,9 +499,7 @@ function AdminProjects() {
                 <button
                   type="button"
                   className="certificate-edit-btn"
-                  onClick={() =>
-                    handleEdit(project)
-                  }
+                  onClick={() => handleEdit(project)}
                 >
                   <Pencil size={16} />
                   Edit
@@ -498,9 +508,7 @@ function AdminProjects() {
                 <button
                   type="button"
                   className="certificate-delete-btn"
-                  onClick={() =>
-                    handleDelete(project.id)
-                  }
+                  onClick={() => handleDelete(project.id)}
                 >
                   <Trash2 size={16} />
                   Delete
@@ -521,4 +529,3 @@ function AdminProjects() {
 }
 
 export default AdminProjects;
-

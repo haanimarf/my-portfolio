@@ -5,13 +5,17 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
-function Projects() {
-  const [selectedProject, setSelectedProject] =
-    useState(null);
+import { supabase } from "../supabase";
 
-  // Default projects
+function Projects() {
+  const [selectedProject, setSelectedProject] = useState(null);
+
+  // ==============================
+  // DEFAULT PROJECTS
+  // ==============================
   const defaultProjects = [
     {
+      id: "tour-main",
       title: "Tour-Main",
       category: "Web Development",
       description:
@@ -26,6 +30,7 @@ function Projects() {
     },
 
     {
+      id: "weather-app",
       title: "Weather App",
       category: "Web Application",
       description:
@@ -45,6 +50,7 @@ function Projects() {
     },
 
     {
+      id: "image-slider",
       title: "Image Slider",
       category: "Frontend Development",
       description:
@@ -59,6 +65,7 @@ function Projects() {
     },
 
     {
+      id: "resume-app",
       title: "Resume App",
       category: "Portfolio",
       description:
@@ -73,67 +80,90 @@ function Projects() {
     },
   ];
 
- const [projects, setProjects] = useState([]);
+  // ==============================
+  // PROJECT STATE
+  // ==============================
+  const [projects, setProjects] = useState(defaultProjects);
 
-  // Load projects added from Admin Panel
-  useEffect(() => {
-    const savedProjects =
-      localStorage.getItem("portfolioProjects");
+  // ==============================
+  // LOAD PROJECTS FROM SUPABASE
+  // ==============================
+  const loadProjects = async () => {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    if (savedProjects) {
-      try {
-        const adminProjects =
-          JSON.parse(savedProjects);
+    if (error) {
+      console.error(
+        "Unable to load projects from Supabase:",
+        error
+      );
 
-        const formattedAdminProjects =
-          adminProjects.map((project) => ({
-            ...project,
-
-            category:
-              project.category ||
-              "Web Development",
-
-            description:
-              project.description ||
-              "A portfolio project developed to demonstrate practical technical skills.",
-
-            details:
-              project.details ||
-              project.description ||
-              "A portfolio project developed to demonstrate practical technical skills.",
-
-            technologies:
-              typeof project.technologies === "string"
-                ? project.technologies
-                    .split(",")
-                    .map((technology) =>
-                      technology.trim()
-                    )
-                    .filter(Boolean)
-                : project.technologies || [],
-
-            github:
-              project.githubLink || "#",
-
-            demo:
-              project.liveLink || "#",
-
-            image:
-              project.image ||
-              "/projects/project-placeholder.png",
-          }));
-
-        setProjects([
-          ...defaultProjects,
-          ...formattedAdminProjects,
-        ]);
-      } catch (error) {
-        console.error(
-          "Unable to load admin projects:",
-          error
-        );
-      }
+      // If Supabase fails, show default projects
+      setProjects(defaultProjects);
+      return;
     }
+
+    // ==============================
+    // FORMAT SUPABASE PROJECTS
+    // ==============================
+    const formattedProjects = data.map((project) => ({
+      id: project.id,
+
+      title:
+        project.title ||
+        "Untitled Project",
+
+      category:
+        project.category ||
+        "Web Development",
+
+      description:
+        project.description ||
+        "A portfolio project developed to demonstrate practical technical skills.",
+
+      details:
+        project.description ||
+        "A portfolio project developed to demonstrate practical technical skills.",
+
+      technologies:
+        typeof project.technologies === "string"
+          ? project.technologies
+              .split(",")
+              .map((technology) => technology.trim())
+              .filter(Boolean)
+          : Array.isArray(project.technologies)
+          ? project.technologies
+          : [],
+
+      github:
+        project.github_link ||
+        "#",
+
+      demo:
+        project.live_link ||
+        "#",
+
+      image:
+        project.image ||
+        "/projects/project-placeholder.png",
+    }));
+
+    // ==============================
+    // DEFAULT + ADMIN PROJECTS
+    // ==============================
+    setProjects([
+      ...defaultProjects,
+      ...formattedProjects,
+    ]);
+  };
+
+  // ==============================
+  // INITIAL LOAD
+  // ==============================
+  useEffect(() => {
+    loadProjects();
   }, []);
 
   return (
@@ -143,7 +173,9 @@ function Projects() {
     >
       <div className="projects-container">
 
-        {/* SECTION HEADING */}
+        {/* ==============================
+            SECTION HEADING
+        ============================== */}
         <div className="section-heading projects-heading">
           <p>MY PROJECTS</p>
 
@@ -152,13 +184,18 @@ function Projects() {
           </h2>
         </div>
 
-        {/* PROJECT GRID */}
+        {/* ==============================
+            PROJECT GRID
+        ============================== */}
         <div className="projects-grid">
 
           {projects.map((project, index) => (
             <article
               className="project-card"
-              key={project.id || index}
+              key={
+                project.id ||
+                `${project.title}-${index}`
+              }
               onClick={() =>
                 setSelectedProject(project)
               }
@@ -210,17 +247,19 @@ function Projects() {
                 </p>
 
                 {/* TECHNOLOGIES */}
-                <div className="project-technologies">
+                {project.technologies?.length > 0 && (
+                  <div className="project-technologies">
 
-                  {project.technologies.map(
-                    (technology, techIndex) => (
-                      <span key={techIndex}>
-                        {technology}
-                      </span>
-                    )
-                  )}
+                    {project.technologies.map(
+                      (technology, techIndex) => (
+                        <span key={techIndex}>
+                          {technology}
+                        </span>
+                      )
+                    )}
 
-                </div>
+                  </div>
+                )}
 
                 {/* BUTTONS */}
                 <div
@@ -258,14 +297,15 @@ function Projects() {
                 </div>
 
               </div>
-
             </article>
           ))}
 
         </div>
       </div>
 
-      {/* PROJECT MODAL */}
+      {/* ==============================
+          PROJECT MODAL
+      ============================== */}
       {selectedProject && (
         <div
           className="project-modal-overlay"
@@ -318,6 +358,7 @@ function Projects() {
                 {selectedProject.details}
               </p>
 
+              {/* TECHNOLOGIES */}
               {selectedProject.technologies?.length >
                 0 && (
                 <>
