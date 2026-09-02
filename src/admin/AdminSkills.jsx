@@ -9,6 +9,7 @@ import {
   X,
   Save,
 } from "lucide-react";
+import { supabase } from "../supabase";
 
 function AdminSkills() {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ function AdminSkills() {
   const [skills, setSkills] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -29,31 +32,28 @@ function AdminSkills() {
     "Tools & Technologies",
   ];
 
-  // Load saved skills
+  // Load skills from Supabase
   useEffect(() => {
-    const savedSkills =
-      localStorage.getItem("portfolioSkills");
-
-    if (savedSkills) {
-      try {
-        setSkills(JSON.parse(savedSkills));
-      } catch (error) {
-        console.error(
-          "Unable to load skills:",
-          error
-        );
-      }
-    }
+    loadSkills();
   }, []);
 
-  // Save skills
-  const saveSkills = (updatedSkills) => {
-    setSkills(updatedSkills);
+  const loadSkills = async () => {
+    setLoading(true);
 
-    localStorage.setItem(
-      "portfolioSkills",
-      JSON.stringify(updatedSkills)
-    );
+    const { data, error } = await supabase
+      .from("skills")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Load skills error:", error);
+      alert("Unable to load skills.");
+      setSkills([]);
+    } else {
+      setSkills(data || []);
+    }
+
+    setLoading(false);
   };
 
   // Handle input
@@ -91,7 +91,7 @@ function AdminSkills() {
   };
 
   // Submit
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.name.trim()) {
@@ -99,32 +99,42 @@ function AdminSkills() {
       return;
     }
 
-    if (editingId) {
-      const updatedSkills = skills.map(
-        (skill) =>
-          skill.id === editingId
-            ? {
-                ...skill,
-                name: formData.name.trim(),
-                category: formData.category,
-              }
-            : skill
-      );
+    setSaving(true);
 
-      saveSkills(updatedSkills);
+    const skillData = {
+      name: formData.name.trim(),
+      category: formData.category,
+    };
+
+    // UPDATE
+    if (editingId) {
+      const { error } = await supabase
+        .from("skills")
+        .update(skillData)
+        .eq("id", editingId);
+
+      if (error) {
+        console.error("Update skill error:", error);
+        alert("Unable to update skill.");
+        setSaving(false);
+        return;
+      }
 
       alert("Skill updated successfully!");
-    } else {
-      const newSkill = {
-        id: Date.now(),
-        name: formData.name.trim(),
-        category: formData.category,
-      };
+    }
 
-      saveSkills([
-        ...skills,
-        newSkill,
-      ]);
+    // INSERT
+    else {
+      const { error } = await supabase
+        .from("skills")
+        .insert([skillData]);
+
+      if (error) {
+        console.error("Add skill error:", error);
+        alert("Unable to add skill.");
+        setSaving(false);
+        return;
+      }
 
       alert("Skill added successfully!");
     }
@@ -136,23 +146,34 @@ function AdminSkills() {
 
     setEditingId(null);
     setShowForm(false);
+
+    await loadSkills();
+
+    setSaving(false);
   };
 
   // Delete
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this skill?"
     );
 
     if (!confirmDelete) return;
 
-    const updatedSkills = skills.filter(
-      (skill) => skill.id !== id
-    );
+    const { error } = await supabase
+      .from("skills")
+      .delete()
+      .eq("id", id);
 
-    saveSkills(updatedSkills);
+    if (error) {
+      console.error("Delete skill error:", error);
+      alert("Unable to delete skill.");
+      return;
+    }
 
     alert("Skill deleted successfully!");
+
+    await loadSkills();
   };
 
   return (
@@ -294,10 +315,13 @@ function AdminSkills() {
             <button
               type="submit"
               className="admin-save-btn"
+              disabled={saving}
             >
               <Save size={18} />
 
-              {editingId
+              {saving
+                ? "Saving..."
+                : editingId
                 ? "Update Skill"
                 : "Save Skill"}
             </button>
@@ -307,9 +331,19 @@ function AdminSkills() {
         </div>
       )}
 
-      {/* EMPTY STATE */}
-      {skills.length === 0 ? (
+      {/* LOADING */}
+      {loading ? (
 
+        <div className="admin-empty-state">
+          <h2>Loading Skills...</h2>
+          <p>
+            Please wait while your skills are loading.
+          </p>
+        </div>
+
+      ) : skills.length === 0 ? (
+
+        /* EMPTY STATE */
         <div className="admin-empty-state">
 
           <div className="empty-icon">
@@ -403,4 +437,3 @@ function AdminSkills() {
 }
 
 export default AdminSkills;
-

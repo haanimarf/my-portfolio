@@ -1,19 +1,32 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabase";
 
 function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (email === "admin@gmail.com" && password === "admin123") {
-      navigate("/admin/dashboard");
-    } else {
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
       alert("Invalid email or password");
+      console.error("Login error:", error);
+      return;
     }
+
+    navigate("/admin/dashboard");
   };
 
   return (
@@ -54,8 +67,12 @@ function AdminLogin() {
             />
           </div>
 
-          <button type="submit" className="admin-login-button">
-            Login
+          <button
+            type="submit"
+            className="admin-login-button"
+            disabled={loading}
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 

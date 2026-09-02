@@ -10,6 +10,7 @@ import {
   X,
   Save,
 } from "lucide-react";
+import { supabase } from "../supabase";
 
 function AdminCertificates() {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ function AdminCertificates() {
   const [certificates, setCertificates] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -25,31 +28,28 @@ function AdminCertificates() {
     link: "",
   });
 
-  // Load certificates from localStorage
+  // Load certificates from Supabase
   useEffect(() => {
-    const savedCertificates =
-      localStorage.getItem("portfolioCertificates");
-
-    if (savedCertificates) {
-      try {
-        setCertificates(JSON.parse(savedCertificates));
-      } catch (error) {
-        console.error(
-          "Unable to load certificates:",
-          error
-        );
-      }
-    }
+    loadCertificates();
   }, []);
 
-  // Save certificates to localStorage
-  const saveCertificates = (updatedCertificates) => {
-    setCertificates(updatedCertificates);
+  const loadCertificates = async () => {
+    setLoading(true);
 
-    localStorage.setItem(
-      "portfolioCertificates",
-      JSON.stringify(updatedCertificates)
-    );
+    const { data, error } = await supabase
+      .from("certificates")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Unable to load certificates:", error);
+      alert("Unable to load certificates.");
+      setLoading(false);
+      return;
+    }
+
+    setCertificates(data || []);
+    setLoading(false);
   };
 
   // Handle input changes
@@ -79,17 +79,17 @@ function AdminCertificates() {
     setEditingId(certificate.id);
 
     setFormData({
-      title: certificate.title,
-      issuer: certificate.issuer,
-      date: certificate.date,
-      link: certificate.link,
+      title: certificate.title || "",
+      issuer: certificate.issuer || "",
+      date: certificate.date || "",
+      link: certificate.link || "",
     });
 
     setShowForm(true);
   };
 
   // Save certificate
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!formData.title || !formData.issuer) {
@@ -97,30 +97,47 @@ function AdminCertificates() {
       return;
     }
 
-    if (editingId) {
-      const updatedCertificates = certificates.map(
-        (certificate) =>
-          certificate.id === editingId
-            ? {
-                ...certificate,
-                ...formData,
-              }
-            : certificate
-      );
+    setSaving(true);
 
-      saveCertificates(updatedCertificates);
+    if (editingId) {
+      // Update certificate
+      const { error } = await supabase
+        .from("certificates")
+        .update({
+          title: formData.title,
+          issuer: formData.issuer,
+          date: formData.date,
+          link: formData.link,
+        })
+        .eq("id", editingId);
+
+      if (error) {
+        console.error("Update certificate error:", error);
+        alert("Unable to update certificate.");
+        setSaving(false);
+        return;
+      }
 
       alert("Certificate updated successfully!");
     } else {
-      const newCertificate = {
-        id: Date.now(),
-        ...formData,
-      };
+      // Add certificate
+      const { error } = await supabase
+        .from("certificates")
+        .insert([
+          {
+            title: formData.title,
+            issuer: formData.issuer,
+            date: formData.date,
+            link: formData.link,
+          },
+        ]);
 
-      saveCertificates([
-        ...certificates,
-        newCertificate,
-      ]);
+      if (error) {
+        console.error("Add certificate error:", error);
+        alert("Unable to add certificate.");
+        setSaving(false);
+        return;
+      }
 
       alert("Certificate added successfully!");
     }
@@ -134,23 +151,35 @@ function AdminCertificates() {
 
     setEditingId(null);
     setShowForm(false);
+    setSaving(false);
+
+    // Reload latest data from Supabase
+    loadCertificates();
   };
 
   // Delete certificate
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this certificate?"
     );
 
     if (!confirmDelete) return;
 
-    const updatedCertificates = certificates.filter(
-      (certificate) => certificate.id !== id
-    );
+    const { error } = await supabase
+      .from("certificates")
+      .delete()
+      .eq("id", id);
 
-    saveCertificates(updatedCertificates);
+    if (error) {
+      console.error("Delete certificate error:", error);
+      alert("Unable to delete certificate.");
+      return;
+    }
 
     alert("Certificate deleted successfully!");
+
+    // Reload latest data
+    loadCertificates();
   };
 
   return (
@@ -339,10 +368,13 @@ function AdminCertificates() {
             <button
               type="submit"
               className="admin-save-btn"
+              disabled={saving}
             >
               <Save size={18} />
 
-              {editingId
+              {saving
+                ? "Saving..."
+                : editingId
                 ? "Update Certificate"
                 : "Save Certificate"}
             </button>
@@ -357,7 +389,23 @@ function AdminCertificates() {
           CERTIFICATE LIST
       ================================= */}
 
-      {certificates.length === 0 ? (
+      {loading ? (
+
+        <div className="admin-empty-state">
+          <div className="empty-icon">
+            <Award size={35} />
+          </div>
+
+          <h2>
+            Loading Certificates...
+          </h2>
+
+          <p>
+            Please wait while certificates are loaded.
+          </p>
+        </div>
+
+      ) : certificates.length === 0 ? (
 
         <div className="admin-empty-state">
 
@@ -470,3 +518,4 @@ function AdminCertificates() {
 }
 
 export default AdminCertificates;
+

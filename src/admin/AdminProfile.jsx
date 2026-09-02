@@ -1,16 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save, User } from "lucide-react";
+import { supabase } from "../supabase";
 
 function AdminProfile() {
   const navigate = useNavigate();
 
-  // Profile image
-  const [profileImage, setProfileImage] = useState(
-    localStorage.getItem("portfolioProfileImage") || ""
-  );
+  const [profileImage, setProfileImage] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
 
-  // Profile details
   const [profile, setProfile] = useState({
     name: "Fathima Haanim",
     role: "Data Analyst | Web Developer",
@@ -18,6 +16,43 @@ function AdminProfile() {
     email: "admin@gmail.com",
     location: "Sri Lanka",
   });
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Load profile from Supabase
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    const { data, error } = await supabase
+      .from("profile")
+      .select("*")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Load profile error:", error);
+      setLoading(false);
+      return;
+    }
+
+    if (data) {
+      setProfile({
+        name: data.name || "",
+        role: data.role || "",
+        bio: data.bio || "",
+        email: data.email || "",
+        location: data.location || "",
+      });
+
+      setProfileImage(data.profile_image || "");
+    }
+
+    setLoading(false);
+  };
 
   // Handle profile input changes
   const handleChange = (e) => {
@@ -27,57 +62,165 @@ function AdminProfile() {
     });
   };
 
-  // Handle profile image upload
+  // Handle profile image selection
   const handleImageChange = (e) => {
     const file = e.target.files[0];
 
     if (!file) return;
 
-    // Check image type
     if (!file.type.startsWith("image/")) {
       alert("Please select a valid image file.");
       return;
     }
 
-    // Check image size - maximum 2MB
     if (file.size > 2 * 1024 * 1024) {
       alert("Image size should be less than 2MB.");
       return;
     }
 
-    const reader = new FileReader();
+    setSelectedFile(file);
 
-    reader.onloadend = () => {
-      setProfileImage(reader.result);
+    // Preview image
+    const previewUrl = URL.createObjectURL(file);
+    setProfileImage(previewUrl);
+  };
 
-      localStorage.setItem(
-        "portfolioProfileImage",
-        reader.result
+  // Upload profile image
+  const uploadProfileImage = async () => {
+    if (!selectedFile) {
+      return profileImage;
+    }
+
+    const fileExt = selectedFile.name.split(".").pop();
+    const fileName = `profile-${Date.now()}.${fileExt}`;
+
+    const filePath = fileName;
+
+    const { error: uploadError } = await supabase.storage
+      .from("profile-images")
+      .upload(filePath, selectedFile, {
+        upsert: true,
+        contentType: selectedFile.type,
+      });
+
+    if (uploadError) {
+      console.error(
+        "Profile image upload error:",
+        uploadError
       );
-    };
 
-    reader.readAsDataURL(file);
+      alert("Unable to upload profile image.");
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from("profile-images")
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
   };
 
   // Save profile
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
 
-    localStorage.setItem(
-      "portfolioProfile",
-      JSON.stringify(profile)
-    );
+    setSaving(true);
 
-    alert("Profile updated successfully!");
+    try {
+      let imageUrl = profileImage;
+
+      // Upload new image if selected
+      if (selectedFile) {
+        imageUrl = await uploadProfileImage();
+
+        if (!imageUrl) {
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Check if profile already exists
+      const { data: existingProfile, error: fetchError } =
+        await supabase
+          .from("profile")
+          .select("id")
+          .limit(1)
+          .maybeSingle();
+
+      if (fetchError) {
+        console.error(
+          "Check profile error:",
+          fetchError
+        );
+
+        alert("Unable to save profile.");
+        setSaving(false);
+        return;
+      }
+
+      const profileData = {
+        name: profile.name.trim(),
+        role: profile.role.trim(),
+        bio: profile.bio.trim(),
+        email: profile.email.trim(),
+        location: profile.location.trim(),
+        profile_image: imageUrl || "",
+        updated_at: new Date().toISOString(),
+      };
+
+      let error;
+
+      // UPDATE existing profile
+      if (existingProfile) {
+        const result = await supabase
+          .from("profile")
+          .update(profileData)
+          .eq("id", existingProfile.id);
+
+        error = result.error;
+      }
+
+      // INSERT first profile
+      else {
+        const result = await supabase
+          .from("profile")
+          .insert([profileData]);
+
+        error = result.error;
+      }
+
+      if (error) {
+        console.error(
+          "Save profile error:",
+          error
+        );
+
+        alert("Unable to save profile.");
+        setSaving(false);
+        return;
+      }
+
+      setSelectedFile(null);
+
+      alert("Profile updated successfully!");
+
+      await loadProfile();
+    } catch (error) {
+      console.error(
+        "Profile save error:",
+        error
+      );
+
+      alert("Something went wrong.");
+    }
+
+    setSaving(false);
   };
 
   return (
     <div className="admin-page">
 
-      {/* ================================
-          HEADER
-      ================================= */}
-
+      {/* HEADER */}
       <header className="admin-page-header">
 
         <div>
@@ -95,7 +238,9 @@ function AdminProfile() {
         <button
           type="button"
           className="admin-back-btn"
-          onClick={() => navigate("/admin/dashboard")}
+          onClick={() =>
+            navigate("/admin/dashboard")
+          }
         >
           <ArrowLeft size={18} />
           Back to Dashboard
@@ -103,17 +248,10 @@ function AdminProfile() {
 
       </header>
 
-
-      {/* ================================
-          PROFILE CONTENT
-      ================================= */}
-
+      {/* PROFILE CONTENT */}
       <div className="admin-profile-container">
 
-        {/* ================================
-            PROFILE PREVIEW
-        ================================= */}
-
+        {/* PROFILE PREVIEW */}
         <div className="admin-profile-preview">
 
           <div className="profile-avatar">
@@ -143,18 +281,13 @@ function AdminProfile() {
 
         </div>
 
-
-        {/* ================================
-            PROFILE FORM
-        ================================= */}
-
+        {/* PROFILE FORM */}
         <form
           className="admin-profile-form"
           onSubmit={handleSave}
         >
 
           {/* Full Name */}
-
           <div className="admin-form-group">
 
             <label>
@@ -172,9 +305,7 @@ function AdminProfile() {
 
           </div>
 
-
           {/* Professional Title */}
-
           <div className="admin-form-group">
 
             <label>
@@ -192,9 +323,7 @@ function AdminProfile() {
 
           </div>
 
-
           {/* Email */}
-
           <div className="admin-form-group">
 
             <label>
@@ -212,9 +341,7 @@ function AdminProfile() {
 
           </div>
 
-
           {/* Location */}
-
           <div className="admin-form-group">
 
             <label>
@@ -232,9 +359,7 @@ function AdminProfile() {
 
           </div>
 
-
           {/* Bio */}
-
           <div className="admin-form-group">
 
             <label>
@@ -252,9 +377,7 @@ function AdminProfile() {
 
           </div>
 
-
           {/* Profile Image */}
-
           <div className="admin-form-group">
 
             <label>
@@ -280,15 +403,17 @@ function AdminProfile() {
 
           </div>
 
-
           {/* Save Button */}
-
           <button
             type="submit"
             className="admin-save-btn"
+            disabled={saving || loading}
           >
             <Save size={18} />
-            Save Changes
+
+            {saving
+              ? "Saving..."
+              : "Save Changes"}
           </button>
 
         </form>

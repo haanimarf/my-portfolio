@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabase";
 
 function AdminContact() {
   const navigate = useNavigate();
@@ -12,22 +13,52 @@ function AdminContact() {
     github: "",
   });
 
-  useEffect(() => {
-    const savedContact =
-      localStorage.getItem("portfolioContact");
+  const [contactId, setContactId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-    if (savedContact) {
-      try {
-        setFormData(JSON.parse(savedContact));
-      } catch (error) {
+  // Load contact information from Supabase
+  useEffect(() => {
+    const loadContact = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("contact")
+        .select("*")
+        .order("updated_at", {
+          ascending: false,
+        })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
         console.error(
           "Unable to load contact information:",
           error
         );
+        setLoading(false);
+        return;
       }
-    }
+
+      if (data) {
+        setContactId(data.id);
+
+        setFormData({
+          email: data.email || "",
+          phone: data.phone || "",
+          location: data.location || "",
+          linkedin: data.linkedin || "",
+          github: data.github || "",
+        });
+      }
+
+      setLoading(false);
+    };
+
+    loadContact();
   }, []);
 
+  // Handle input changes
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -35,15 +66,82 @@ function AdminContact() {
     });
   };
 
-  const handleSubmit = (e) => {
+  // Save contact information
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    localStorage.setItem(
-      "portfolioContact",
-      JSON.stringify(formData)
-    );
+    setSaving(true);
 
-    alert("Contact information saved successfully!");
+    try {
+      let error;
+
+      if (contactId) {
+        // Update existing contact
+        const { error: updateError } = await supabase
+          .from("contact")
+          .update({
+            email: formData.email,
+            phone: formData.phone,
+            location: formData.location,
+            linkedin: formData.linkedin,
+            github: formData.github,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", contactId);
+
+        error = updateError;
+      } else {
+        // Insert new contact
+        const { data, error: insertError } =
+          await supabase
+            .from("contact")
+            .insert([
+              {
+                email: formData.email,
+                phone: formData.phone,
+                location: formData.location,
+                linkedin: formData.linkedin,
+                github: formData.github,
+              },
+            ])
+            .select()
+            .single();
+
+        error = insertError;
+
+        if (data) {
+          setContactId(data.id);
+        }
+      }
+
+      if (error) {
+        console.error(
+          "Save contact information error:",
+          error
+        );
+
+        alert(
+          "Unable to save contact information. Please try again."
+        );
+
+        return;
+      }
+
+      alert(
+        "Contact information saved successfully!"
+      );
+    } catch (error) {
+      console.error(
+        "Unexpected contact error:",
+        error
+      );
+
+      alert(
+        "Something went wrong. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -91,7 +189,10 @@ function AdminContact() {
             <span>Email</span>
 
             <strong>
-              {formData.email || "Not added yet"}
+              {loading
+                ? "Loading..."
+                : formData.email ||
+                  "Not added yet"}
             </strong>
           </div>
 
@@ -108,7 +209,10 @@ function AdminContact() {
             <span>Phone</span>
 
             <strong>
-              {formData.phone || "Not added yet"}
+              {loading
+                ? "Loading..."
+                : formData.phone ||
+                  "Not added yet"}
             </strong>
           </div>
 
@@ -125,7 +229,10 @@ function AdminContact() {
             <span>Location</span>
 
             <strong>
-              {formData.location || "Not added yet"}
+              {loading
+                ? "Loading..."
+                : formData.location ||
+                  "Not added yet"}
             </strong>
           </div>
 
@@ -142,7 +249,10 @@ function AdminContact() {
             <span>LinkedIn</span>
 
             <strong>
-              {formData.linkedin || "Not added yet"}
+              {loading
+                ? "Loading..."
+                : formData.linkedin ||
+                  "Not added yet"}
             </strong>
           </div>
 
@@ -159,7 +269,10 @@ function AdminContact() {
             <span>GitHub</span>
 
             <strong>
-              {formData.github || "Not added yet"}
+              {loading
+                ? "Loading..."
+                : formData.github ||
+                  "Not added yet"}
             </strong>
           </div>
 
@@ -281,8 +394,11 @@ function AdminContact() {
           <button
             type="submit"
             className="admin-save-btn"
+            disabled={saving}
           >
-            ✓ Save Contact Information
+            {saving
+              ? "Saving..."
+              : "✓ Save Contact Information"}
           </button>
 
         </form>
@@ -294,3 +410,4 @@ function AdminContact() {
 }
 
 export default AdminContact;
+

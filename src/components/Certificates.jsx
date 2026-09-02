@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabase";
 
 function Certificates() {
-  const [selectedCertificate, setSelectedCertificate] = useState(null);
+  const [selectedCertificate, setSelectedCertificate] =
+    useState(null);
 
   // Default certificates
   const defaultCertificates = [
@@ -12,7 +14,11 @@ function Certificates() {
       type: "Data Analytics",
       description:
         "Completed an online course focused on preparing and organizing data for analysis using Microsoft Excel.",
-      skills: ["Microsoft Excel", "Data Preparation", "Data Analysis"],
+      skills: [
+        "Microsoft Excel",
+        "Data Preparation",
+        "Data Analysis",
+      ],
       verify:
         "https://coursera.org/verify/8KG9OWO6SNZG",
     },
@@ -34,7 +40,8 @@ function Certificates() {
     },
 
     {
-      title: "HR Management Fundamentals: Recruitment to Development",
+      title:
+        "HR Management Fundamentals: Recruitment to Development",
       issuer: "Coursera",
       date: "April 24, 2026",
       type: "Professional Course",
@@ -176,50 +183,57 @@ function Certificates() {
     },
   ];
 
-  // Certificates including admin-added certificates
+  // Certificates state
   const [certificates, setCertificates] =
     useState(defaultCertificates);
 
+  // Load certificates from Supabase
   useEffect(() => {
-    const savedCertificates =
-      localStorage.getItem("portfolioCertificates");
-
-    if (savedCertificates) {
-      try {
-        const adminCertificates =
-          JSON.parse(savedCertificates);
-
-        const formattedAdminCertificates =
-          adminCertificates.map((certificate) => ({
-            ...certificate,
-
-            type:
-              certificate.type ||
-              "Professional Certificate",
-
-            description:
-              certificate.description ||
-              `Completed the ${certificate.title} certificate issued by ${certificate.issuer}.`,
-
-            skills:
-              certificate.skills || [],
-
-            verify:
-              certificate.link || "",
-          }));
-
-        setCertificates([
-          ...defaultCertificates,
-          ...formattedAdminCertificates,
-        ]);
-      } catch (error) {
-        console.error(
-          "Unable to load admin certificates:",
-          error
-        );
-      }
-    }
+    loadCertificates();
   }, []);
+
+  const loadCertificates = async () => {
+    const { data, error } = await supabase
+      .from("certificates")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(
+        "Unable to load certificates from Supabase:",
+        error
+      );
+
+      // If Supabase fails, show default certificates
+      setCertificates(defaultCertificates);
+      return;
+    }
+
+    const formattedCertificates = (data || []).map(
+      (certificate) => ({
+        ...certificate,
+
+        type:
+          certificate.type ||
+          "Professional Certificate",
+
+        description:
+          certificate.description ||
+          `Completed the ${certificate.title} certificate issued by ${certificate.issuer}.`,
+
+        skills:
+          certificate.skills || [],
+
+        verify:
+          certificate.link || "",
+      })
+    );
+
+    setCertificates([
+      ...defaultCertificates,
+      ...formattedCertificates,
+    ]);
+  };
 
   return (
     <section
@@ -243,7 +257,7 @@ function Certificates() {
           {certificates.map((certificate, index) => (
             <div
               className="certificate-card"
-              key={certificate.id || index}
+              key={`${certificate.id || "default"}-${index}`}
               onClick={() =>
                 setSelectedCertificate(certificate)
               }
@@ -337,6 +351,7 @@ function Certificates() {
 
               <div>
                 <strong>Completed</strong>
+
                 <span>
                   {selectedCertificate.date}
                 </span>
@@ -366,7 +381,7 @@ function Certificates() {
 
                   {selectedCertificate.skills.map(
                     (skill, index) => (
-                      <span key={index}>
+                      <span key={`${skill}-${index}`}>
                         {skill}
                       </span>
                     )
@@ -391,6 +406,7 @@ function Certificates() {
 
         </div>
       )}
+
     </section>
   );
 }

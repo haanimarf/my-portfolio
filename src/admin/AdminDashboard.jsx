@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   ExternalLink,
 } from "lucide-react";
+import { supabase } from "../supabase";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -21,54 +22,113 @@ function AdminDashboard() {
     skills: 0,
   });
 
+  const [loading, setLoading] = useState(true);
+
+  // Load Dashboard Statistics from Supabase
   useEffect(() => {
-    const profile =
-      localStorage.getItem("portfolioProfile");
+    const loadDashboardStats = async () => {
+      setLoading(true);
 
-    const certificates =
-      localStorage.getItem("portfolioCertificates");
+      try {
+        // Profile count
+        const { count: profileCount, error: profileError } =
+          await supabase
+            .from("profile")
+            .select("*", {
+              count: "exact",
+              head: true,
+            });
 
-    const projects =
-      localStorage.getItem("portfolioProjects");
+        if (profileError) {
+          console.error(
+            "Profile count error:",
+            profileError
+          );
+        }
 
-    const skills =
-      localStorage.getItem("portfolioSkills");
+        // Certificates count
+        const {
+          count: certificateCount,
+          error: certificateError,
+        } = await supabase
+          .from("certificates")
+          .select("*", {
+            count: "exact",
+            head: true,
+          });
 
-    let certificateCount = 0;
-    let projectCount = 0;
-    let skillCount = 0;
+        if (certificateError) {
+          console.error(
+            "Certificate count error:",
+            certificateError
+          );
+        }
 
-    try {
-      if (certificates) {
-        certificateCount =
-          JSON.parse(certificates).length;
+        // Projects count
+        const {
+          count: projectCount,
+          error: projectError,
+        } = await supabase
+          .from("projects")
+          .select("*", {
+            count: "exact",
+            head: true,
+          });
+
+        if (projectError) {
+          console.error(
+            "Project count error:",
+            projectError
+          );
+        }
+
+        // Skills count
+        const {
+          count: skillCount,
+          error: skillError,
+        } = await supabase
+          .from("skills")
+          .select("*", {
+            count: "exact",
+            head: true,
+          });
+
+        if (skillError) {
+          console.error(
+            "Skill count error:",
+            skillError
+          );
+        }
+
+        setStats({
+          profile: profileCount || 0,
+          certificates: certificateCount || 0,
+          projects: projectCount || 0,
+          skills: skillCount || 0,
+        });
+      } catch (error) {
+        console.error(
+          "Unable to load dashboard statistics:",
+          error
+        );
+      } finally {
+        setLoading(false);
       }
+    };
 
-      if (projects) {
-        projectCount =
-          JSON.parse(projects).length;
-      }
-
-      if (skills) {
-        skillCount =
-          JSON.parse(skills).length;
-      }
-    } catch (error) {
-      console.error(
-        "Unable to load dashboard statistics:",
-        error
-      );
-    }
-
-    setStats({
-      profile: profile ? 1 : 0,
-      certificates: certificateCount,
-      projects: projectCount,
-      skills: skillCount,
-    });
+    loadDashboardStats();
   }, []);
 
-  const handleLogout = () => {
+  // Supabase Logout
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Logout error:", error);
+      alert("Unable to logout. Please try again.");
+      return;
+    }
+
     navigate("/admin");
   };
 
@@ -194,7 +254,7 @@ function AdminDashboard() {
               <span>Profile</span>
 
               <strong>
-                {stats.profile}
+                {loading ? "..." : stats.profile}
               </strong>
 
               <small>
@@ -215,7 +275,7 @@ function AdminDashboard() {
               <span>Certificates</span>
 
               <strong>
-                {stats.certificates}
+                {loading ? "..." : stats.certificates}
               </strong>
 
               <small>
@@ -236,7 +296,7 @@ function AdminDashboard() {
               <span>Projects</span>
 
               <strong>
-                {stats.projects}
+                {loading ? "..." : stats.projects}
               </strong>
 
               <small>
@@ -257,7 +317,7 @@ function AdminDashboard() {
               <span>Skills</span>
 
               <strong>
-                {stats.skills}
+                {loading ? "..." : stats.skills}
               </strong>
 
               <small>
@@ -368,4 +428,3 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
-

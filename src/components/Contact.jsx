@@ -1,6 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { Mail, MapPin, Phone } from "lucide-react";
+import { supabase } from "../supabase";
 
 function Contact() {
   const [contact, setContact] = useState({
@@ -13,40 +13,49 @@ function Contact() {
   });
 
   useEffect(() => {
-    const savedContact =
-      localStorage.getItem("portfolioContact");
+    const loadContact = async () => {
+      const { data, error } = await supabase
+        .from("contact")
+        .select("*")
+        .order("updated_at", {
+          ascending: false,
+        })
+        .limit(1)
+        .maybeSingle();
 
-    if (savedContact) {
-      try {
-        const parsedContact = JSON.parse(savedContact);
-
-        setContact({
-          email:
-            parsedContact.email ||
-            "fathimahaanim2003@gmail.com",
-
-          phone:
-            parsedContact.phone || "",
-
-          location:
-            parsedContact.location ||
-            "Sri Lanka",
-
-          linkedin:
-            parsedContact.linkedin ||
-            "https://www.linkedin.com/in/fathima-haanim/",
-
-          github:
-            parsedContact.github ||
-            "https://github.com/haanimarf",
-        });
-      } catch (error) {
+      if (error) {
         console.error(
           "Unable to load contact information:",
           error
         );
+        return;
       }
-    }
+
+      if (data) {
+        setContact({
+          email:
+            data.email ||
+            "fathimahaanim2003@gmail.com",
+
+          phone:
+            data.phone || "",
+
+          location:
+            data.location ||
+            "Sri Lanka",
+
+          linkedin:
+            data.linkedin ||
+            "https://www.linkedin.com/in/fathima-haanim/",
+
+          github:
+            data.github ||
+            "https://github.com/haanimarf",
+        });
+      }
+    };
+
+    loadContact();
   }, []);
 
   return (
@@ -91,7 +100,6 @@ function Contact() {
             </div>
           </a>
 
-
           {/* Phone */}
           {contact.phone && (
             <a
@@ -111,7 +119,6 @@ function Contact() {
               </div>
             </a>
           )}
-
 
           {/* GitHub */}
           {contact.github && (
@@ -139,7 +146,6 @@ function Contact() {
             </a>
           )}
 
-
           {/* LinkedIn */}
           {contact.linkedin && (
             <a
@@ -164,7 +170,6 @@ function Contact() {
             </a>
           )}
 
-
           {/* Location */}
           <div className="contact-pill">
             <div className="contact-pill-icon">
@@ -187,3 +192,4 @@ function Contact() {
 }
 
 export default Contact;
+

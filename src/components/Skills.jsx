@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { supabase } from "../supabase";
 
 const defaultSkillGroups = [
   {
@@ -57,20 +58,26 @@ function Skills() {
     useState(defaultSkillGroups);
 
   useEffect(() => {
-    const savedSkills =
-      localStorage.getItem("portfolioSkills");
+    const loadSkills = async () => {
+      const { data, error } = await supabase
+        .from("skills")
+        .select("*")
+        .order("created_at", {
+          ascending: true,
+        });
 
-    if (!savedSkills) {
-      return;
-    }
+      if (error) {
+        console.error(
+          "Unable to load skills from Supabase:",
+          error
+        );
+        return;
+      }
 
-    try {
-      const adminSkills = JSON.parse(savedSkills);
-
-      const updatedGroups = defaultSkillGroups.map(
-        (group) => {
+      const updatedGroups =
+        defaultSkillGroups.map((group) => {
           const adminSkillsForCategory =
-            adminSkills
+            (data || [])
               .filter(
                 (skill) =>
                   skill.category === group.category
@@ -91,16 +98,12 @@ function Skills() {
             ...group,
             skills: uniqueSkills,
           };
-        }
-      );
+        });
 
       setSkillGroups(updatedGroups);
-    } catch (error) {
-      console.error(
-        "Unable to load admin skills:",
-        error
-      );
-    }
+    };
+
+    loadSkills();
   }, []);
 
   return (
